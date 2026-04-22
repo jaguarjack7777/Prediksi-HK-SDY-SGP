@@ -1,0 +1,331 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI HK Prediktor - Direct Source</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .tab-active { background: #2563eb; color: white; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }
+        .number-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* Sticky Navigation Style */
+        .sticky-nav {
+            position: sticky;
+            top: 1rem;
+            z-index: 50;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        .scanning-line { height: 2px; background: #3b82f6; position: absolute; width: 100%; top: 50%; left: 0; animation: scan 2s infinite; pointer-events: none; }
+        .loader { width: 12px; height: 12px; border: 2px solid #fff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+    <div class="max-w-md w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 id="appTitle" class="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent uppercase">
+                AI HK PREDIKTOR
+            </h1>
+            <p class="text-slate-500 text-[10px] font-bold tracking-[0.4em] mt-1">DIRECT DATA ANALYZER</p>
+        </div>
+
+        <!-- Navigation Tabs (Sticky) -->
+        <div class="sticky-nav mb-6 p-1 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+            <div class="flex gap-2">
+                <button onclick="switchMarket('SDY')" id="tabSDY" class="flex-1 py-3 rounded-xl text-[11px] font-black transition-all">SDY</button>
+                <button onclick="switchMarket('SGP')" id="tabSGP" class="flex-1 py-3 rounded-xl text-[11px] font-black transition-all">SGP</button>
+                <button onclick="switchMarket('HK')" id="tabHK" class="flex-1 py-3 rounded-xl text-[11px] font-black transition-all">HK</button>
+            </div>
+        </div>
+
+        <!-- Engine Card -->
+        <div class="glass rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden">
+            <div id="scanLine" class="scanning-line hidden"></div>
+            
+            <div class="flex flex-col gap-6 relative z-10">
+                <!-- Market Info -->
+                <div class="flex justify-between items-center px-1">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Pasaran</span>
+                        <span id="marketLabel" class="text-lg font-black text-white">HONGKONG POOLS</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Status</span>
+                        <span id="sourceStatus" class="text-[10px] block font-mono text-emerald-400">READY</span>
+                    </div>
+                </div>
+
+                <!-- Run Button -->
+                <button id="runBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 px-4 rounded-2xl transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95 overflow-hidden">
+                    <span id="btnIcon">⚡</span>
+                    <span id="btnText" class="tracking-widest text-[11px] uppercase transition-all duration-300">Ambil Data & Prediksi</span>
+                </button>
+
+                <!-- Status Text -->
+                <div id="status" class="hidden text-center py-2 text-[10px] font-mono font-bold uppercase tracking-tighter"></div>
+
+                <!-- Database Result -->
+                <div id="resultBox" class="hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-[9px] font-black text-slate-500 uppercase tracking-widest">14 Result Terakhir</h2>
+                        <span id="cacheInfo" class="text-[8px] text-blue-400 font-bold italic"></span>
+                    </div>
+                    <div id="dataList" class="grid grid-cols-4 gap-2"></div>
+                </div>
+
+                <!-- AI Output -->
+                <div id="predictionBox" class="hidden border-t border-white/5 pt-6">
+                    <h2 class="text-center text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-4">Hasil Analisis 2D</h2>
+                    <div id="predictionList" class="grid grid-cols-3 gap-3"></div>
+                    
+                    <div class="mt-6 p-4 bg-white/5 rounded-xl border border-white/5">
+                        <p id="algoNote" class="text-[9px] text-slate-400 italic">Menganalisis tabel data historis langsung dari pusat.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peringatan Putih -->
+        <div class="mt-8 px-6 py-5 rounded-2xl bg-white border border-white/20 shadow-xl">
+            <p class="text-black text-center text-[12px] font-bold leading-relaxed">
+                Data ditarik langsung dari sumber tabel pusat.<br>
+                <span class="text-blue-600">Tetap gunakan prediksi ini sebagai bahan perbandingan saja.</span>
+            </p>
+        </div>
+
+        <!-- Extra spacing for scrolling -->
+        <div class="h-20"></div>
+    </div>
+
+    <script>
+        const CACHE_DURATION = 60 * 60 * 1000; // 1 Jam dalam Milidetik
+
+        const markets = {
+            SDY: {
+                title: "AI SDY PREDIKTOR",
+                label: "SYDNEY POOLS",
+                url: "https://tabelupdate.online/sydney.php" 
+            },
+            SGP: {
+                title: "AI SGP PREDIKTOR",
+                label: "SINGAPORE POOLS",
+                url: "https://tabelupdate.online/singapore.php",
+                backupUrl: "https://livedrawsgp.net/"
+            },
+            HK: {
+                title: "AI HK PREDIKTOR",
+                label: "HONGKONG POOLS",
+                url: "https://tabelupdate.online/"
+            }
+        };
+
+        let currentMarket = 'HK';
+
+        const PROXIES = [
+            (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&_=${Date.now()}`,
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+
+        function switchMarket(m) {
+            currentMarket = m;
+            document.getElementById('appTitle').innerText = markets[m].title;
+            document.getElementById('marketLabel').innerText = markets[m].label;
+            
+            ['SDY', 'SGP', 'HK'].forEach(x => {
+                document.getElementById(`tab${x}`).classList.remove('tab-active');
+            });
+            document.getElementById(`tab${m}`).classList.add('tab-active');
+            
+            resetUI();
+            checkCache(m);
+        }
+
+        function resetUI() {
+            document.getElementById('resultBox').classList.add('hidden');
+            document.getElementById('predictionBox').classList.add('hidden');
+            document.getElementById('status').classList.add('hidden');
+            document.getElementById('dataList').innerHTML = '';
+            document.getElementById('predictionList').innerHTML = '';
+            document.getElementById('btnText').innerText = "Ambil Data & Prediksi";
+            // Kembalikan style teks ke default
+            document.getElementById('btnText').className = "tracking-widest text-[11px] uppercase transition-all duration-300 font-black";
+            document.getElementById('btnIcon').innerHTML = "⚡";
+            document.getElementById('cacheInfo').innerText = "";
+        }
+
+        function checkCache(market) {
+            const cachedData = localStorage.getItem(`ai_predictor_${market}`);
+            if (cachedData) {
+                const parsed = JSON.parse(cachedData);
+                const now = new Date().getTime();
+                
+                if (now - parsed.timestamp < CACHE_DURATION) {
+                    const minutesLeft = Math.ceil((CACHE_DURATION - (now - parsed.timestamp)) / 60000);
+                    document.getElementById('cacheInfo').innerText = `(Cached: ${minutesLeft}m left)`;
+                    renderResults(parsed.data);
+                    renderPredictions(parsed.data);
+                    document.getElementById('status').classList.remove('hidden');
+                    document.getElementById('status').innerText = "LOADED FROM CACHE";
+                    document.getElementById('status').className = "text-blue-400 text-center py-2 text-[10px] font-mono font-bold uppercase tracking-tighter";
+                    document.getElementById('btnText').innerText = "PERBARUI DATA";
+                }
+            }
+        }
+
+        async function startAnalysis() {
+            resetUI();
+            const btn = document.getElementById('runBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const scanLine = document.getElementById('scanLine');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            
+            // Perubahan teks: lebih kecil, lebih tipis, dan tidak mepet
+            btnText.innerText = "sedang mengambil data dan memprediksi";
+            btnText.className = "tracking-tight text-[9px] lowercase font-medium transition-all duration-300 opacity-80 px-2 text-center";
+            
+            btnIcon.innerHTML = '<span class="loader"></span>';
+            scanLine.classList.remove('hidden');
+            status.classList.remove('hidden');
+            status.innerText = "SYNCING WITH SOURCE TABLE...";
+            status.className = "text-blue-400 text-center py-2 text-[10px] font-mono font-bold uppercase tracking-tighter";
+
+            let success = false;
+            const marketData = markets[currentMarket];
+            const urlsToTry = [marketData.url];
+            if (marketData.backupUrl) urlsToTry.push(marketData.backupUrl);
+
+            for (let targetUrl of urlsToTry) {
+                if (success) break;
+                for(let proxyFn of PROXIES) {
+                    try {
+                        const proxyUrl = proxyFn(targetUrl);
+                        const response = await fetch(proxyUrl);
+                        if (!response.ok) continue;
+
+                        let html = "";
+                        if (proxyUrl.includes('allorigins')) {
+                            const data = await response.json();
+                            html = data.contents;
+                        } else {
+                            html = await response.text();
+                        }
+                        
+                        if (!html || html.length < 100) continue;
+
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        const cleanText = tempDiv.innerText;
+
+                        const found = cleanText.match(/\b\d{4}\b/g) || [];
+                        const currentYear = new Date().getFullYear();
+                        const filtered = [];
+                        found.forEach((n, idx) => {
+                            const val = parseInt(n);
+                            if ((val < currentYear - 2 || val > currentYear + 2) && n !== found[idx-1]) {
+                                filtered.push(n);
+                            }
+                        });
+
+                        const unique = filtered.slice(0, 14);
+
+                        if(unique.length >= 3) {
+                            const cacheObject = {
+                                timestamp: new Date().getTime(),
+                                data: unique
+                            };
+                            localStorage.setItem(`ai_predictor_${currentMarket}`, JSON.stringify(cacheObject));
+                            
+                            renderResults(unique);
+                            renderPredictions(unique);
+                            success = true;
+                            break;
+                        }
+                    } catch(e) { console.log("Attempt failed"); }
+                }
+            }
+
+            if(!success) {
+                status.innerText = "GAGAL MENYINKRONKAN DATA";
+                status.className = "text-red-500 text-center py-2 text-[10px] font-mono font-bold uppercase tracking-tighter";
+                btnText.innerText = "COBA LAGI";
+                btnText.className = "tracking-widest text-[11px] uppercase font-black";
+                btnIcon.innerHTML = "❌";
+            } else {
+                status.innerText = "DATABASE TERHUBUNG";
+                status.className = "text-emerald-500 text-center py-2 text-[10px] font-mono font-bold uppercase tracking-tighter";
+                btnText.innerText = "SELESAI";
+                btnText.className = "tracking-widest text-[11px] uppercase font-black";
+                btnIcon.innerHTML = "✅";
+            }
+
+            btn.disabled = false;
+            scanLine.classList.add('hidden');
+        }
+
+        function renderResults(data) {
+            document.getElementById('resultBox').classList.remove('hidden');
+            const container = document.getElementById('dataList');
+            container.innerHTML = '';
+            data.forEach(num => {
+                const div = document.createElement('div');
+                div.className = "number-box py-2 text-center rounded-lg font-mono text-[11px] text-slate-400 font-bold";
+                div.innerText = num;
+                container.appendChild(div);
+            });
+        }
+
+        function renderPredictions(data) {
+            document.getElementById('predictionBox').classList.remove('hidden');
+            const container = document.getElementById('predictionList');
+            container.innerHTML = '';
+            
+            const ekorList = data.map(n => n.substring(2));
+            const lastEkor = ekorList[0] || "00";
+            const lastVal = parseInt(lastEkor);
+
+            let picks = new Set();
+            picks.add(lastEkor.split('').reverse().join(''));
+            picks.add(((lastVal + 1) % 100).toString().padStart(2, '0'));
+            picks.add((lastVal - 1 < 0 ? 99 : lastVal - 1).toString().padStart(2, '0'));
+            
+            if(ekorList.length > 1) {
+                const gap = Math.abs(parseInt(ekorList[0]) - parseInt(ekorList[1]));
+                picks.add(gap.toString().padStart(2, '0'));
+            }
+            
+            while(picks.size < 6) {
+                const r = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+                picks.add(r);
+            }
+
+            Array.from(picks).slice(0, 6).forEach(p => {
+                const div = document.createElement('div');
+                div.className = "bg-emerald-500/10 border border-emerald-400/30 py-4 rounded-2xl text-center text-xl font-black text-emerald-400";
+                div.innerText = p;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('runBtn').addEventListener('click', startAnalysis);
+        window.onload = () => switchMarket('HK');
+    </script>
+</body>
+</html>
+
+```
